@@ -1,0 +1,103 @@
+import pygame
+import sys
+import time
+import math
+from logic_game import BounceBoxGame
+from save import save_game_stats
+
+# Importation du visuel depuis notre fichier objets
+from objets import COLORS, draw_table, draw_balls, draw_aim, draw_ui, show_winner
+
+# ── Constantes générales ──────────────────────────────────────────────────────
+WIDTH, HEIGHT = 800, 500
+FPS = 60
+UI_HEIGHT = 80
+
+def main():
+    pygame.init() 
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("BounceBox")
+    clock = pygame.time.Clock()
+
+    # Polices
+    try:
+        font = pygame.font.SysFont("Arial", 20, bold=True)
+        small = pygame.font.SysFont("Arial", 15)
+        big_font = pygame.font.SysFont("Arial", 40, bold=True)
+    except:
+        font = pygame.font.Font(None, 24)
+        small = pygame.font.Font(None, 18)
+        big_font = pygame.font.Font(None, 50)
+
+    game = BounceBoxGame(WIDTH, HEIGHT - UI_HEIGHT)
+    start_time = time.time()
+    simulating = False
+    aiming = True
+    game_over = False
+
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_pos = (mouse_pos[0], min(mouse_pos[1], HEIGHT - UI_HEIGHT - 1))
+
+        # Calcul de la force dynamique
+        current_force = 0
+        if aiming and not simulating and not game_over:
+            dx = game.white_ball.pos.x - mouse_pos[0]
+            dy = game.white_ball.pos.y - mouse_pos[1]
+            current_force = min(math.sqrt(dx*dx + dy*dy) / 15, 20)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                game = BounceBoxGame(WIDTH, HEIGHT - UI_HEIGHT)
+                simulating, aiming, game_over = False, True, False
+                start_time = time.time()
+
+            if not game_over and not simulating and aiming:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    game.process_turn_with_mouse(mouse_pos[0], mouse_pos[1])
+                    simulating = True
+                    aiming = False
+
+        # --- SIMULATION FLUIDE ---
+        if simulating:
+            game.update_physics() 
+
+            still_moving = any(b.is_active and b.vel.magnitude() > 0.05 for b in game.balls)
+            
+            if not still_moving:
+                simulating, aiming = False, True
+                
+                game.balls = [b for b in game.balls if b.is_active]
+                game.current_player = 'blue' if game.current_player == 'red' else 'red'
+                
+                if any(s >= 5 for s in game.scores.values()):
+                    game_over = True
+                    duration = time.time() - start_time
+                    winner = "ROUGE" if game.scores['red'] >= 5 else "BLEU"
+                    save_game_stats(winner, game.scores, duration)
+
+        # ── Dessin ───────────────────────────────────────────────────────────
+        screen.fill(COLORS['background'])
+        
+        # On passe WIDTH, HEIGHT et UI_HEIGHT en paramètres
+        draw_table(screen, WIDTH, HEIGHT, UI_HEIGHT)
+        draw_balls(screen, game.balls)
+        
+        if aiming and not simulating and not game_over:
+            draw_aim(screen, game.white_ball, mouse_pos, WIDTH, HEIGHT, UI_HEIGHT)
+            
+        draw_ui(screen, game, font, small, current_force, aiming, WIDTH, HEIGHT, UI_HEIGHT)
+        
+        if game_over:
+            winner = "ROUGE" if game.scores['red'] >= 5 else "BLEU"
+            col = COLORS['red'] if winner == "ROUGE" else COLORS['blue']
+            show_winner(screen, font, big_font, winner, col, WIDTH, HEIGHT)
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+if __name__ == "__main__":
+    main()

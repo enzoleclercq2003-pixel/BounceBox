@@ -1,0 +1,8 @@
+import datetime
+
+def save_game_stats(winner, scores, duration):
+    filename = "game_history.csv"
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open(filename, "a") as f:
+        # Format compatible Excel (CSV)
+        f.write(f"{date_str};{winner};{scores['red']};{scores['blue']};{duration:.2f}\n")

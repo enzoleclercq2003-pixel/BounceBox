@@ -1,0 +1,70 @@
+import random
+import math
+from objets import Ball, Vector
+from physics import PhysicsEngine
+
+class BounceBoxGame:
+    def __init__(self, width=800, height=500):
+        self.width = width
+        self.height = height
+        self.balls = []
+        self.scores = {'red': 0, 'blue': 0}
+        self.current_player = 'red'
+        self.setup_game()
+
+    def setup_game(self):
+        self.white_ball = Ball('white', self.width//2, self.height//2)
+        self.balls.append(self.white_ball)
+        
+        colors = ['grey']*9 + ['blue']*2
+        for color in colors:
+            self.balls.append(Ball(color, random.randint(50, 750), random.randint(50, 450)))
+
+    def apply_rules(self, hit_ball):
+        opponent = 'blue' if self.current_player == 'red' else 'red'
+
+        if hit_ball.color == 'grey':
+            hit_ball.color = self.current_player
+            print(f"Action: Une bille grise devient {self.current_player}")
+        elif hit_ball.color == self.current_player:
+            hit_ball.is_active = False
+            self.scores[self.current_player] += 1
+            print(f"Action: {self.current_player} a gagné une bille !")
+        elif hit_ball.color == opponent:
+            hit_ball.color = 'grey'
+            print(f"Action: Une bille {opponent} redevient grise")
+
+    def process_turn_with_mouse(self, mouse_x, mouse_y):
+        from objets import Vector
+        dx = self.white_ball.pos.x - mouse_x
+        dy = self.white_ball.pos.y - mouse_y
+        distance = math.sqrt(dx**2 + dy**2)
+        force = min(distance / 15, 25)
+        angle_rad = math.atan2(dy, dx)
+        
+        self.white_ball.vel = Vector(math.cos(angle_rad) * force, math.sin(angle_rad) * force)
+
+    def update_physics(self):
+        from physics import PhysicsEngine
+        
+        for b in self.balls:
+            if not b.is_active: continue
+            if b.vel.magnitude() > 0.05:
+                b.update_position()
+                PhysicsEngine.handle_wall_collision(b, self.width, self.height)
+
+        for i, b1 in enumerate(self.balls):
+            if not b1.is_active: continue
+            for j in range(i + 1, len(self.balls)):
+                b2 = self.balls[j]
+                if not b2.is_active: continue
+                if PhysicsEngine.check_collision(b1, b2):
+                    if b1.color == 'white' or b2.color == 'white':
+                        hit = b2 if b1.color == 'white' else b1
+                        self.apply_rules(hit)
+                    PhysicsEngine.resolve_collision(b1, b2)
+
+    def check_winner(self):
+        if self.scores['red'] >= 5: return 'red'
+        if self.scores['blue'] >= 5: return 'blue'
+        return None

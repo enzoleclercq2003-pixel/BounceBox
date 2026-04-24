@@ -1,1 +1,129 @@
-class boule 
+"""Balles, vecteurs, couleurs et fonctions de dessin pour BounceBox."""
+
+import math
+import pygame
+
+# ── Constantes visuelles et Couleurs ──────────────────────────────────────────
+COLORS = {
+    'background': (20, 20, 35),
+    'table':      (34, 85, 50),
+    'border':     (80, 50, 20),
+    'white':      (245, 245, 245),
+    'grey':       (160, 160, 160),
+    'red':        (220, 60, 60),
+    'blue':       (60, 130, 220),
+    'ui_bg':      (15, 15, 28),
+    'text':       (220, 220, 200),
+    'aim_line':   (255, 255, 200, 120),
+    'yellow':     (255, 220, 50),
+}
+
+BALL_COLORS = {
+    'white': COLORS['white'],
+    'grey':  COLORS['grey'],
+    'red':   COLORS['red'],
+    'blue':  COLORS['blue'],
+}
+
+# ── Fonctions de Dessin ───────────────────────────────────────────────────────
+def draw_table(surface, width, height, ui_height):
+    table_rect = pygame.Rect(0, 0, width, height - ui_height)
+    pygame.draw.rect(surface, COLORS['border'], table_rect.inflate(12, 12), border_radius=8)
+    pygame.draw.rect(surface, COLORS['table'], table_rect, border_radius=6)
+
+def draw_balls(surface, balls):
+    for ball in balls:
+        if not ball.is_active: continue
+        col = BALL_COLORS.get(ball.color, COLORS['grey'])
+        pos = (int(ball.pos.x), int(ball.pos.y))
+        r = ball.radius
+        pygame.draw.circle(surface, col, pos, r)
+        pygame.draw.circle(surface, (255, 255, 255, 160), (pos[0]-r//3, pos[1]-r//3), r//3)
+
+def draw_aim(surface, white_ball, mouse_pos, width, height, ui_height):
+    if white_ball is None: return
+    x0, y0 = int(white_ball.pos.x), int(white_ball.pos.y)
+    mx, my = mouse_pos
+    dx, dy = x0 - mx, y0 - my
+    dist = math.sqrt(dx*dx + dy*dy) or 1
+    force_visuelle = min(dist / 15, 20) 
+    length = force_visuelle * 10 
+    angle = math.atan2(dy, dx)
+    end = (int(x0 + math.cos(angle) * length), int(y0 + math.sin(angle) * length))
+    
+    aim_surf = pygame.Surface((width, height - ui_height), pygame.SRCALPHA)
+    pygame.draw.line(aim_surf, (255, 255, 200, 150), (x0, y0), end, 2)
+    pygame.draw.circle(aim_surf, (255, 255, 200, 100), end, 4)
+    surface.blit(aim_surf, (0, 0))
+
+def draw_ui(surface, game, font, small_font, force, aiming, width, height, ui_height):
+    ui_rect = pygame.Rect(0, height - ui_height, width, ui_height)
+    pygame.draw.rect(surface, COLORS['ui_bg'], ui_rect)
+    player_col = COLORS['red'] if game.current_player == 'red' else COLORS['blue']
+    txt = font.render(f"Tour : {game.current_player.upper()}", True, player_col)
+    surface.blit(txt, (20, height - ui_height + 10))
+    # Jauge
+    bar_x, bar_y = 20, height - ui_height + 48
+    bar_w = 200
+    pygame.draw.rect(surface, (60, 60, 80), (bar_x, bar_y, bar_w, 14), border_radius=7)
+    fill = int((force / 20) * bar_w)
+    if fill > 0:
+        pygame.draw.rect(surface, (80, 200, 80), (bar_x, bar_y, fill, 14), border_radius=7)
+
+def show_winner(surface, font, big_font, name, color, width, height):
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 180))
+    surface.blit(overlay, (0, 0))
+    msg = big_font.render(f"VICTOIRE {name} !", True, color)
+    surface.blit(msg, (width//2 - msg.get_width()//2, height//2 - 50))
+
+
+# ── Classes Logiques ──────────────────────────────────────────────────────────
+class Vector:
+    def __init__(self, x=0.0, y=0.0):
+        self.x = float(x)
+        self.y = float(y)
+
+    def __add__(self, other):
+        return Vector(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return Vector(self.x - other.x, self.y - other.y)
+
+    def magnitude(self):
+        return math.sqrt(self.x**2 + self.y**2)
+
+    def normalize(self):
+        mag = self.magnitude()
+        if mag == 0:
+            return Vector(0, 0)
+        return Vector(self.x / mag, self.y / mag)
+
+    def scale(self, factor):
+        self.x *= factor
+        self.y *= factor
+
+    def dot(self, other):
+        return self.x * other.x + self.y * other.y
+
+    def copy(self):
+        return Vector(self.x, self.y)
+
+
+class Ball:
+    RADIUS = 12
+
+    def __init__(self, color, x, y, radius=None):
+        self.color = color          # 'white', 'grey', 'red', 'blue'
+        self.pos = Vector(x, y)
+        self.vel = Vector(0, 0)
+        self.radius = radius if radius is not None else Ball.RADIUS
+        self.is_active = True       # False = capturée / hors jeu
+        self.mass = 1.0
+
+    def update_position(self, friction=0.985):
+        self.pos.x += self.vel.x
+        self.pos.y += self.vel.y
+        self.vel.scale(friction)
+        if self.vel.magnitude() < 0.08:
+            self.vel = Vector(0, 0)

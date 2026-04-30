@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import pygame
 import sys
 import time
@@ -101,3 +103,15 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
+import datetime
+
+def save_game_stats(winner, scores, duration):
+    filename = "game_history.csv"
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open(filename, "a") as f:
+        # Format compatible Excel (CSV)
+        f.write(f"{date_str};{winner};{scores['red']};{scores['blue']};{duration:.2f}\n")    
+    
+    

@@ -1,7 +1,7 @@
+# -*- coding: utf-8 -*-
 """Moteur physique pour BounceBox."""
 
-import math
-from objets import Vector
+import pygame
 
 class PhysicsEngine:
     @staticmethod
@@ -28,36 +28,33 @@ class PhysicsEngine:
 
     @staticmethod
     def check_collision(b1, b2):
-        dx = b1.pos.x - b2.pos.x
-        dy = b1.pos.y - b2.pos.y
-        return math.sqrt(dx*dx + dy*dy) < (b1.radius + b2.radius)
+        # Utilisation de la méthode Pygame intégrée (très rapide)
+        return b1.pos.distance_to(b2.pos) < (b1.radius + b2.radius)
 
     @staticmethod
     def resolve_collision(b1, b2):
-        """Choc élastique 2D correct avec masses égales."""
-        dx = b2.pos.x - b1.pos.x
-        dy = b2.pos.y - b1.pos.y
-        dist = math.sqrt(dx*dx + dy*dy)
+        """Physique d'un choc élastique."""
+        # Calcul de la distance entre les centres des deux balles
+        delta = b2.pos - b1.pos
+        dist = delta.magnitude()
+        
         if dist == 0:
             dist = 0.01
 
-        # Axe de collision normalisé
-        nx = dx / dist
-        ny = dy / dist
+        # Vecteur normal unitaire (n)
+        n = delta / dist
 
-        # Séparation pour éviter l'interpénétration
-        overlap = (b1.radius + b2.radius) - dist
-        b1.pos.x -= nx * overlap / 2
-        b1.pos.y -= ny * overlap / 2
-        b2.pos.x += nx * overlap / 2
-        b2.pos.y += ny * overlap / 2
+        # Séparation pour éviter l'interpénétration (overlap)
+        superposition = (b1.radius + b2.radius) - dist
+        
+        # Déplacement des balles suivant le vecteur normal
+        b1.pos -= n * (superposition / 2)
+        b2.pos += n * (superposition / 2)
 
-        # Composantes des vitesses sur l'axe normal
-        v1n = b1.vel.x * nx + b1.vel.y * ny
-        v2n = b2.vel.x * nx + b2.vel.y * ny
+        # Composantes des vitesses sur l'axe normal via le produit scalaire (dot)
+        v1n = b1.vel.dot(n)
+        v2n = b2.vel.dot(n)
 
-        # Échange des composantes normales (masses égales)
-        b1.vel.x += (v2n - v1n) * nx
-        b1.vel.y += (v2n - v1n) * ny
-        b2.vel.x += (v1n - v2n) * nx
-        b2.vel.y += (v1n - v2n) * ny
+        # Échange des composantes normales (puisqu'on est )
+        b1.vel += (v2n - v1n) * n
+        b2.vel += (v1n - v2n) * n

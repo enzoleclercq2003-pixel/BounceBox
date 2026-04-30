@@ -1,117 +1,71 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
-import pygame
-import sys
-import time
+import random
 import math
-from logic_game import BounceBoxGame
-from save import save_game_stats
+import pygame
+from objets import Ball
+from physics import PhysicsEngine
 
-# Importation du visuel depuis notre fichier objets
-from objets import COLORS, draw_table, draw_balls, draw_aim, draw_ui, show_winner
+class BounceBoxGame:
+    def __init__(self, width=800, height=500):
+        self.width = width
+        self.height = height
+        self.balls = []
+        self.scores = {'red': 0, 'blue': 0}
+        self.current_player = 'red'
+        self.setup_game()
 
-# ── Constantes générales ──────────────────────────────────────────────────────
-WIDTH, HEIGHT = 800, 500
-FPS = 60
-UI_HEIGHT = 80
-
-def main():
-    pygame.init() 
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("BounceBox")
-    clock = pygame.time.Clock()
-
-    # Polices
-    try:
-        font = pygame.font.SysFont("Arial", 20, bold=True)
-        small = pygame.font.SysFont("Arial", 15)
-        big_font = pygame.font.SysFont("Arial", 40, bold=True)
-    except:
-        font = pygame.font.Font(None, 24)
-        small = pygame.font.Font(None, 18)
-        big_font = pygame.font.Font(None, 50)
-
-    game = BounceBoxGame(WIDTH, HEIGHT - UI_HEIGHT)
-    start_time = time.time()
-    simulating = False
-    aiming = True
-    game_over = False
-
-    while True:
-        mouse_pos = pygame.mouse.get_pos()
-        mouse_pos = (mouse_pos[0], min(mouse_pos[1], HEIGHT - UI_HEIGHT - 1))
-
-        # Calcul de la force dynamique
-        current_force = 0
-        if aiming and not simulating and not game_over:
-            dx = game.white_ball.pos.x - mouse_pos[0]
-            dy = game.white_ball.pos.y - mouse_pos[1]
-            current_force = min(math.sqrt(dx*dx + dy*dy) / 15, 20)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
-            
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                game = BounceBoxGame(WIDTH, HEIGHT - UI_HEIGHT)
-                simulating, aiming, game_over = False, True, False
-                start_time = time.time()
-
-            if not game_over and not simulating and aiming:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    game.process_turn_with_mouse(mouse_pos[0], mouse_pos[1])
-                    simulating = True
-                    aiming = False
-
-        # --- SIMULATION FLUIDE ---
-        if simulating:
-            game.update_physics() 
-
-            still_moving = any(b.is_active and b.vel.magnitude() > 0.05 for b in game.balls)
-            
-            if not still_moving:
-                simulating, aiming = False, True
-                
-                game.balls = [b for b in game.balls if b.is_active]
-                game.current_player = 'blue' if game.current_player == 'red' else 'red'
-                
-                if any(s >= 5 for s in game.scores.values()):
-                    game_over = True
-                    duration = time.time() - start_time
-                    winner = "ROUGE" if game.scores['red'] >= 5 else "BLEU"
-                    save_game_stats(winner, game.scores, duration)
-
-        # ── Dessin ───────────────────────────────────────────────────────────
-        screen.fill(COLORS['background'])
+    def setup_game(self):
+        self.white_ball = Ball('white', self.width//2, self.height//2)
+        self.balls.append(self.white_ball)
         
-        # On passe WIDTH, HEIGHT et UI_HEIGHT en paramètres
-        draw_table(screen, WIDTH, HEIGHT, UI_HEIGHT)
-        draw_balls(screen, game.balls)
+        colors = ['grey']*9 + ['blue']*2
+        for color in colors:
+            self.balls.append(Ball(color, random.randint(50, 750), random.randint(50, 450)))
+
+    def apply_rules(self, hit_ball):
+        opponent = 'blue' if self.current_player == 'red' else 'red'
+
+        if hit_ball.color == 'grey':
+            hit_ball.color = self.current_player
+            print(f"Action: Une bille grise devient {self.current_player}")
+        elif hit_ball.color == self.current_player:
+            hit_ball.is_active = False
+            self.scores[self.current_player] += 1
+            print(f"Action: {self.current_player} a gagné une bille !")
+        elif hit_ball.color == opponent:
+            hit_ball.color = 'grey'
+            print(f"Action: Une bille {opponent} redevient grise")
+
+    def process_turn_with_mouse(self, mouse_x, mouse_y):
+        dx = self.white_ball.pos.x - mouse_x
+        dy = self.white_ball.pos.y - mouse_y
+        distance = math.sqrt(dx**2 + dy**2)
+        force = min(distance / 15, 25)
+        angle_rad = math.atan2(dy, dx)
         
-        if aiming and not simulating and not game_over:
-            draw_aim(screen, game.white_ball, mouse_pos, WIDTH, HEIGHT, UI_HEIGHT)
-            
-        draw_ui(screen, game, font, small, current_force, aiming, WIDTH, HEIGHT, UI_HEIGHT)
-        
-        if game_over:
-            winner = "ROUGE" if game.scores['red'] >= 5 else "BLEU"
-            col = COLORS['red'] if winner == "ROUGE" else COLORS['blue']
-            show_winner(screen, font, big_font, winner, col, WIDTH, HEIGHT)
+        # Remplacement de l'ancien Vector par pygame.math.Vector2
+        self.white_ball.vel = pygame.math.Vector2(math.cos(angle_rad) * force, math.sin(angle_rad) * force)
 
-        pygame.display.flip()
-        clock.tick(FPS)
+    def update_physics(self):
+        for b in self.balls:
+            if not b.is_active: continue
+            if b.vel.magnitude() > 0.05:
+                b.update_position()
+                PhysicsEngine.handle_wall_collision(b, self.width, self.height)
 
-if __name__ == "__main__":
-    main()
-    
-    
-import datetime
+        for i, b1 in enumerate(self.balls):
+            if not b1.is_active: continue
+            for j in range(i + 1, len(self.balls)):
+                b2 = self.balls[j]
+                if not b2.is_active: continue
+                if PhysicsEngine.check_collision(b1, b2):
+                    if b1.color == 'white' or b2.color == 'white':
+                        hit = b2 if b1.color == 'white' else b1
+                        self.apply_rules(hit)
+                    PhysicsEngine.resolve_collision(b1, b2)
 
-def save_game_stats(winner, scores, duration):
-    filename = "game_history.csv"
-    date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    with open(filename, "a") as f:
-        # Format compatible Excel (CSV)
-        f.write(f"{date_str};{winner};{scores['red']};{scores['blue']};{duration:.2f}\n")    
-    
+    def check_winner(self):
+        if self.scores['red'] >= 5: return 'red'
+        if self.scores['blue'] >= 5: return 'blue'
+        return None
     

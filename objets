@@ -1,9 +1,10 @@
-"""Balles, vecteurs, couleurs et fonctions de dessin pour BounceBox."""
+# -*- coding: utf-8 -*-
+"""Balles, couleurs et fonctions de dessin pour BounceBox."""
 
 import math
 import pygame
 
-# ── Constantes visuelles et Couleurs ──────────────────────────────────────────
+# ── Les couleurs du jeu ──────────────────────────────────────────
 COLORS = {
     'background': (20, 20, 35),
     'table':      (34, 85, 50),
@@ -25,7 +26,7 @@ BALL_COLORS = {
     'blue':  COLORS['blue'],
 }
 
-# ── Fonctions de Dessin ───────────────────────────────────────────────────────
+# ── Affichage Pygame ───────────────────────────────────────────────────────
 def draw_table(surface, width, height, ui_height):
     table_rect = pygame.Rect(0, 0, width, height - ui_height)
     pygame.draw.rect(surface, COLORS['border'], table_rect.inflate(12, 12), border_radius=8)
@@ -78,52 +79,24 @@ def show_winner(surface, font, big_font, name, color, width, height):
     surface.blit(msg, (width//2 - msg.get_width()//2, height//2 - 50))
 
 
-# ── Classes Logiques ──────────────────────────────────────────────────────────
-class Vector:
-    def __init__(self, x=0.0, y=0.0):
-        self.x = float(x)
-        self.y = float(y)
-
-    def __add__(self, other):
-        return Vector(self.x + other.x, self.y + other.y)
-
-    def __sub__(self, other):
-        return Vector(self.x - other.x, self.y - other.y)
-
-    def magnitude(self):
-        return math.sqrt(self.x**2 + self.y**2)
-
-    def normalize(self):
-        mag = self.magnitude()
-        if mag == 0:
-            return Vector(0, 0)
-        return Vector(self.x / mag, self.y / mag)
-
-    def scale(self, factor):
-        self.x *= factor
-        self.y *= factor
-
-    def dot(self, other):
-        return self.x * other.x + self.y * other.y
-
-    def copy(self):
-        return Vector(self.x, self.y)
-
-
+# ── Entité Logique ────────────────────────────────────────────────────────
 class Ball:
     RADIUS = 12
 
     def __init__(self, color, x, y, radius=None):
-        self.color = color          # 'white', 'grey', 'red', 'blue'
-        self.pos = Vector(x, y)
-        self.vel = Vector(0, 0)
+        self.color = color          
+        self.pos = pygame.math.Vector2(x, y) # Utilisation de Pygame Vector2
+        self.vel = pygame.math.Vector2(0, 0) # Utilisation de Pygame Vector2
         self.radius = radius if radius is not None else Ball.RADIUS
-        self.is_active = True       # False = capturée / hors jeu
+        self.is_active = True       
         self.mass = 1.0
 
     def update_position(self, friction=0.985):
-        self.pos.x += self.vel.x
-        self.pos.y += self.vel.y
-        self.vel.scale(friction)
+        # Addition vectorielle directe !
+        self.pos += self.vel
+        
+        # Multiplication scalaire directe !
+        self.vel *= friction
+        
         if self.vel.magnitude() < 0.08:
-            self.vel = Vector(0, 0)
+            self.vel = pygame.math.Vector2(0, 0)

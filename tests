@@ -1,4 +1,27 @@
-1) Test sur l'initialisation du plateau
-2) Test de la superposition des boules, on place
-3) Test sur l'arrêt d'une balle
-4) Test sur la victoire d'un joueur
+TESTS SUR LA CLASSE PLATEAU
+1) Test sur l'initialisation du plateau :
+-> Vérifier qu'à la création du plateau, il y a bien 1 balle blanche, 9 balles grises et 2 balles bleues (ou rouges, selon la configuration de départ) dans la liste self.balles
+2) Test d'application des règles :
+-> Simuler qu'une balle grise est touchée par le joueur Rouge. Vérifier qu'elle devient rouge.
+-> Simuler qu'une balle de l'adversaire (Bleu) est touchée. Vérifier qu'elle redevient grise.
+-> Simuler qu'une balle du joueur actif est touchée. Vérifier qu'elle est marquée comme inactive (est_active = False) et que le score du joueur augmente de 1.
+
+3) Test de changement de tour : 
+-> Appeler changer_tour() et vérifier que le joueur_actif passe bien de "red" à "blue", et que les balles inactives sont bien retirées de la liste.
+4) Test sur la victoire d'un joueur :
+-> Forcer le score d'un joueur à 5 et vérifier que verifier_vainqueur() renvoie bien le nom de ce joueur et non None.
+
+TESTS SUR LA CLASSE BALLE
+5) Test de déplacement basique : 
+-> Créer une balle à (100, 100) avec v_x=5 et v_y=0. 
+-> Appeler Maj_position() (sans toucher les murs) et 
+-> Vérifier que la nouvelle position est bien (105, 0) et que v_x a légèrement diminué à cause de la friction.
+6) Test de détection de collision : 
+->Cas positif : Placer deux balles à une distance strictement inférieure à 2R et vérifier que verifier_collision() renvoie True.
+->Cas négatif : Placer deux balles très loin l'une de l'autre et vérifier que la méthode renvoie False.
+7) Test de rebond sur les murs : 
+-> Placer une balle tout près du bord droit (ex: x = largeur - 1) avec une vitesse pointant vers la droite. 
+-> Appeler Maj_position() et vérifier que la balle ne sort pas de l'écran et que sa vitesse v_x est devenue négative.
+8) Test de résolution de collision 
+-> Faire se percuter une balle en mouvement et une balle à l'arrêt. 
+-> Après resoudre_collision(), vérifier que les deux balles ne se chevauchent plus et que la première a transféré son énergie à la seconde

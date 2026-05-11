@@ -8,9 +8,9 @@ from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPainter
 
-from objets import Plateau, COLORS
+from objets import Plateau, COULEURS
 
-WIDTH, HEIGHT = 2500, 1400
+WIDTH, HEIGHT = 1600, 1400
 FPS = 120
 UI_HEIGHT = 120
 
@@ -21,7 +21,7 @@ def save_game_stats(winner, scores, duration):
         f.write(f"{date_str};{winner};{scores['red']};{scores['blue']};{duration:.2f}\n")
 
 
-class GameWindow(QWidget):
+class fenetreJeu(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("BounceBox")
@@ -53,10 +53,12 @@ class GameWindow(QWidget):
                     save_game_stats(winner, self.plateau.scores, time.time() - self.start_time)
         self.update()
 
+    # Les méthodes ci-dessous (paintEvent, etc.) gardent leur notation camelCase 
+    # car elles appartiennent à la bibliothèque PyQt5 et sont écrasées (override) ici.
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(self.rect(), COLORS['background'])
+        painter.fillRect(self.rect(), COULEURS['background'])
 
         self.plateau.dessiner_plateau(painter)
         self.plateau.dessiner_balles(painter)
@@ -68,7 +70,7 @@ class GameWindow(QWidget):
         bw = self.plateau.balle_blanche
         dx, dy = bw.x - self.mouse_x, bw.y - self.mouse_y
         force = min(math.sqrt(dx*dx + dy*dy) / 15, 20) if (self.aiming and not self.game_over) else 0
-        self.plateau.dessiner_ui(painter, force)
+        self.plateau.dessiner_barre_visee(painter, force)
 
         if self.game_over:
             winner = self.plateau.verifier_vainqueur()
@@ -94,6 +96,7 @@ class GameWindow(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    win = GameWindow()
+    win = fenetreJeu() # Corrigé ici aussi
     win.show()
     sys.exit(app.exec_())
+    

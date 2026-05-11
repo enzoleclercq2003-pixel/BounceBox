@@ -136,6 +136,8 @@ class Plateau:
         self.scores = {'red': 0, 'blue': 0}
         self.joueur_actif = 'red'
         self._initialiser()
+
+    #On initialise le plateau selon les regles BounceBox
     def _initialiser(self):
         self.balle_blanche = BalleBlanche(self.largeur // 2, self.hauteur_jeu // 2)
         self.balles = [self.balle_blanche]
@@ -147,9 +149,11 @@ class Plateau:
             ))
 
     # ── Logique de jeu ────────────────────────────────────────────────────────
-
+  
     def jouer_coup_souris(self, mx, my):
+        #On calcul la distance
         dx, dy = self.balle_blanche.x - mx, self.balle_blanche.y - my
+        #
         dist = math.sqrt(dx**2 + dy**2)
         force = min(dist / 15, 25)
         angle = math.atan2(dy, dx)

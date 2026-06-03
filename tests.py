@@ -5,7 +5,7 @@ Exécution : python tests.py
 """
 import math
 import unittest
-from objets import Balle, BalleBlanche, Plateau
+from objets import Balle, Plateau
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  TESTS CLASSE BALLE (4 tests)

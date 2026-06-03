@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import math
 import random
-from PyQt5.QtCore import QPointF, Qt, QRect
+from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import (QColor, QPen, QBrush, QFont,
-                         QRadialGradient, QLinearGradient)
+                         QRadialGradient)
 
 COULEURS = {
     'background': QColor(20, 20, 35),
@@ -14,17 +14,14 @@ COULEURS = {
     'red':        QColor(220, 60, 60),
     'blue':       QColor(60, 130, 220),
     'ui_bg':      QColor(15, 15, 28),
-    'text':       QColor(220, 220, 200),}
+    'text':       QColor(220, 220, 200),
+}
 
 
 class Balle:
     RAYON = 30
     FRICTION = 0.988
-    # Modélisation arbitraire du coefficient de friction 
-    # pour que la résistance de la balle paraisse réaliste
     SEUIL_ARRET = 0.08
-    # seuil d'arrêt utilisée dans maj_position
-    
     def __init__(self, couleur, x, y):
         self.couleur = couleur
         self.x = float(x)
@@ -32,73 +29,52 @@ class Balle:
         self.vx = 0.0
         self.vy = 0.0
         self.rayon = Balle.RAYON
-        # Pour désigner la balle qui va subir l'action
-        self.est_active = True 
-        
+        self.est_active = True
+
     def norme_vitesse(self):
         return math.sqrt(self.vx ** 2 + self.vy ** 2)
-    
+
     def maj_position(self, largeur, hauteur):
-        # Modélisation physique de l'échange des composantes de vitesse 
-        # selon l axe de collsion pour un choc élastique entre deux sphères 
-        # Actualisation des vexteurs positions suite à une collision
         self.x += self.vx
         self.y += self.vy
-        # Coefficient de friction appliqué à la vitesse
         self.vx *= self.FRICTION
         self.vy *= self.FRICTION
-        # les Collisions et Rebonds sur les Murs
         r = self.rayon
-        # Rebond mur gauche
-        if self.x - r <= 0:        
+
+        if self.x - r <= 0:
             self.x, self.vx = r, abs(self.vx)
-        # Rebond mur droit
-        elif self.x + r >= largeur: 
+        elif self.x + r >= largeur:
             self.x, self.vx = largeur - r, -abs(self.vx)
-        # Rebond mur du bas
-        if self.y - r <= 0:        
+        if self.y - r <= 0:
             self.y, self.vy = r, abs(self.vy)
-        # Rebond mur du haut
-        elif self.y + r >= hauteur: 
+        elif self.y + r >= hauteur:
             self.y, self.vy = hauteur - r, -abs(self.vy)
-            
-        # On définit un seuil d'arrêt net 
-        # puisque la vitesse peut tendre vers 0 sans jamais l'atteindre  
-        if self.norme_vitesse() < self.SEUIL_ARRET: # CORRIGÉ : n minuscule
+
+        if self.norme_vitesse() < self.SEUIL_ARRET:
             self.vx = self.vy = 0.0
-            
-        
+
     def verifier_collision(self, other):
-        # Différence de position de 2 boules
         dx, dy = other.x - self.x, other.y - self.y
-        # On vérifie si la distance entre les 2 centres des boules est inférieure à 2R, 
-        # Si on renvoit True, il y a collision
         return math.sqrt(dx*dx + dy*dy) < (self.rayon + other.rayon)
-    
-    
+
     def gerer_collision(self, other):
-        # Étape 1 : Détermination de l'axe de collision
         dx, dy = other.x - self.x, other.y - self.y
-        # le or 0.01 résout le problème de la superposition parfaite de 2 boules, 
-        # auquel cas la distance serait nulle et on risquerait de diviser par 0
         dist = math.sqrt(dx*dx + dy*dy) or 0.01
         nx, ny = dx / dist, dy / dist
-        # Étape 2 : Séparer les balles qui se chevauchent
+
         superposition = (self.rayon + other.rayon - dist) / 2
-        self.x -= nx * superposition 
+        self.x -= nx * superposition
         self.y -= ny * superposition
-        other.x += nx * superposition 
+        other.x += nx * superposition
         other.y += ny * superposition
-        # Étape 3 : Calcul de la vitesse d'impact
+
         v1n = self.vx * nx + self.vy * ny
         v2n = other.vx * nx + other.vy * ny
-        # Étape 4 : Échange des composantes de vitesse le long de la normale
         self.vx  += (v2n - v1n) * nx
         self.vy  += (v2n - v1n) * ny
         other.vx += (v1n - v2n) * nx
         other.vy += (v1n - v2n) * ny
-        
-        
+
     def draw(self, painter):
         if not self.est_active:
             return
@@ -115,7 +91,7 @@ class Balle:
 class BalleBlanche(Balle):
     def __init__(self, x, y):
         super().__init__('white', x, y)
-        
+
     def barre_visee(self, painter, mx, my):
         dx, dy = self.x - mx, self.y - my
         dist = math.sqrt(dx*dx + dy*dy) or 1
@@ -129,25 +105,29 @@ class BalleBlanche(Balle):
         painter.drawLine(int(self.x), int(self.y), int(fx), int(fy))
 
 
+
 class Plateau:
-    def __init__(self, largeur, hauteur, hauteur_barre_info):
+    def __init__(self, largeur, hauteur, hauteur_barre_info, pseudo_j1, pseudo_j2, parent=None):
         self.largeur = largeur
         self.hauteur_jeu = hauteur - hauteur_barre_info
         self.hauteur_totale = hauteur
         self.hauteur_barre_info = hauteur_barre_info
-        self.balles = []
+        self.parent = parent
+        
+        self.pseudos = {'red': pseudo_j1, 'blue': pseudo_j2}
         self.scores = {'red': 0, 'blue': 0}
         self.joueur_actif = 'red'
+        self.balles = []
         self._initialiser()
-        
+
     def _initialiser(self):
         self.balle_blanche = BalleBlanche(self.largeur // 2, self.hauteur_jeu // 2)
         self.balles = [self.balle_blanche]
         for couleur in ['grey'] * 9 + ['blue'] * 2:
             self.balles.append(Balle(
                 couleur,
-                random.randint(50, self.largeur - 50),
-                random.randint(50, self.hauteur_jeu - 50)
+                random.randint(100, self.largeur - 100),
+                random.randint(100, self.hauteur_jeu - 100)
             ))
 
     # ── Logique de jeu ────────────────────────────────────────────────────────
@@ -172,8 +152,8 @@ class Plateau:
 
     def maj_physique(self):
         for b in self.balles:
-            if b.est_active and b.norme_vitesse() > 0.05: # CORRIGÉ : n minuscule
-                b.maj_position(self.largeur, self.hauteur_jeu) # CORRIGÉ : m minuscule
+            if b.est_active and b.norme_vitesse() > 0.05:
+                b.maj_position(self.largeur, self.hauteur_jeu)
 
         for i, b1 in enumerate(self.balles):
             if not b1.est_active:
@@ -181,7 +161,7 @@ class Plateau:
             for b2 in self.balles[i+1:]:
                 if not b2.est_active:
                     continue
-                if b1.verifier_collision(b2): # CORRIGÉ : v minuscule
+                if b1.verifier_collision(b2):
                     if b1.couleur == 'white' or b2.couleur == 'white':
                         self._appliquer_regles(b2 if b1.couleur == 'white' else b1)
                     b1.gerer_collision(b2)
@@ -193,16 +173,22 @@ class Plateau:
         self.balles = [b for b in self.balles if b.est_active]
 
     def verifier_vainqueur(self):
-        if self.scores['red'] >= 5:  return "ROUGE"
-        if self.scores['blue'] >= 5: return "BLEU"
+        if self.scores['red'] >= 5:  return "red"
+        if self.scores['blue'] >= 5: return "blue"
         return None
 
     # ── Dessin ────────────────────────────────────────────────────────────────
 
-    def dessiner_plateau(self, painter):
-        painter.setPen(QPen(COULEURS['border'], 12))
-        painter.setBrush(QBrush(COULEURS['table']))
-        painter.drawRoundedRect(0, 0, self.largeur, self.hauteur_jeu, 8, 8)
+    def dessiner_plateau(self, painter, image_fond=None):
+        if image_fond and not image_fond.isNull():
+            painter.drawPixmap(0, 0, self.largeur, self.hauteur_jeu, image_fond)
+            painter.setPen(QPen(COULEURS['border'], 12))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(0, 0, self.largeur, self.hauteur_jeu)
+        else:
+            painter.setPen(QPen(COULEURS['border'], 12))
+            painter.setBrush(QBrush(COULEURS['table']))
+            painter.drawRoundedRect(0, 0, self.largeur, self.hauteur_jeu, 8, 8)
 
     def dessiner_balles(self, painter):
         for b in self.balles:
@@ -213,47 +199,80 @@ class Plateau:
 
     def dessiner_barre_visee(self, painter, force):
         y0 = self.hauteur_jeu
+        
+        # Fond de la barre
         painter.setPen(Qt.NoPen)
         painter.setBrush(QBrush(COULEURS['ui_bg']))
         painter.drawRect(0, y0, self.largeur, self.hauteur_barre_info)
 
-        font = QFont("Arial", 14, QFont.Bold)
-        painter.setFont(font)
-
+        # ─── ZONE GAUCHE : Tour et Puissance ───────────────────────────────
+        font_tour = QFont("Arial", 14, QFont.Bold)
+        painter.setFont(font_tour)
         col_j = COULEURS['red'] if self.joueur_actif == 'red' else COULEURS['blue']
+        nom_actif = self.pseudos[self.joueur_actif]
         painter.setPen(col_j)
-        painter.drawText(20, y0 + 34, f"TOUR : {self.joueur_actif.upper()}")
+        painter.drawText(15, y0 + 35, f"Tour : {nom_actif.upper()}")
 
-        painter.setPen(COULEURS['red'])
-        painter.drawText(self.largeur // 2 - 130, y0 + 50, f"ROUGE : {self.scores['red']}")
-        painter.setPen(COULEURS['blue'])
-        painter.drawText(self.largeur // 2 + 130,  y0 + 50, f"BLEU : {self.scores['blue']}")
+        # Texte "PUISSANCE"
+        painter.setFont(QFont("Arial", 10, QFont.Bold))
+        painter.setPen(COULEURS['text'])
+        painter.drawText(30, y0 + 65, "PUISSANCE")
 
-        # Barre de force
+        # Jauge de puissance
         painter.setPen(Qt.NoPen)
         painter.setBrush(QBrush(QColor(60, 60, 80)))
-        painter.drawRoundedRect(20, y0 + 45, 200, 12, 4, 4)
+        painter.drawRoundedRect(30, y0 + 75, 200, 15, 4, 4)
         remplissage = int((force / 20) * 200)
         if remplissage > 0:
             painter.setBrush(QBrush(QColor(80, 200, 80)))
-            painter.drawRoundedRect(20, y0 + 45, remplissage, 12, 4, 4)
+            painter.drawRoundedRect(30, y0 + 75, remplissage, 15, 4, 4)
 
+        # ─── ZONE CENTRE : Pseudos, Niveaux et Scores ──────────────────────
+        # Pseudos placés plus haut
+        font_pseudo = QFont("Arial", 12, QFont.Bold)
+        painter.setFont(font_pseudo)
+        
+        # Joueur Rouge (décalé à gauche)
+        painter.setPen(COULEURS['red'])
+        texte_j1 = f"{self.pseudos['red']}"
+        painter.drawText(self.largeur // 2 - 260, y0 + 60, texte_j1)
+        
+        # Joueur Bleu (décalé à droite)
+        painter.setPen(COULEURS['blue'])
+        texte_j2 = f"{self.pseudos['blue']}"
+        painter.drawText(self.largeur // 2 + 110, y0 + 60, texte_j2)
+
+        # Scores placés au centre, bien espacés
+        font_score = QFont("Arial", 42, QFont.Bold) 
+        painter.setFont(font_score)
+        
+        painter.setPen(COULEURS['red'])
+        painter.drawText(self.largeur // 2 - 120, y0 + 95, str(self.scores['red']))
+
+        # Tiret central
         painter.setPen(COULEURS['text'])
-        painter.setFont(QFont("Arial", 10))
-        painter.drawText(20, y0 + 92, "R = Rejouer")
+        painter.drawText(self.largeur // 2 - 20, y0 + 95, "-")
 
-    def afficher_vainqueur(self, painter, nom):
+        painter.setPen(COULEURS['blue'])
+        painter.drawText(self.largeur // 2 + 50, y0 + 95, str(self.scores['blue']))
+
+        # ─── ZONE DROITE : Contrôles ───────────────────────────────────────
+        painter.setFont(QFont("Arial", 8))
+        painter.setPen(COULEURS['text'])
+        painter.drawText(self.largeur - 260, y0 + 45, "[ R ] = Rejouer")
+        painter.drawText(self.largeur - 260, y0 + 75, "[ ECHAP ] = Menu principal")
+
+    def afficher_vainqueur(self, painter, id_vainqueur):
         painter.setBrush(QBrush(QColor(0, 0, 0, 180)))
         painter.setPen(Qt.NoPen)
         painter.drawRect(0, 0, self.largeur, self.hauteur_totale)
-
-        col = COULEURS['red'] if nom == "ROUGE" else COULEURS['blue']
+        col = COULEURS[id_vainqueur]
+        nom = self.pseudos[id_vainqueur]
         painter.setFont(QFont("Arial", 40, QFont.Bold))
         painter.setPen(col)
         painter.drawText(QRect(0, self.hauteur_totale // 2 - 60, self.largeur, 80),
-                         Qt.AlignCenter, f"VICTOIRE DE {nom} !")
-
+                         Qt.AlignCenter, f"VICTOIRE DE {nom.upper()} !")
         painter.setFont(QFont("Arial", 18))
         painter.setPen(COULEURS['text'])
         painter.drawText(QRect(0, self.hauteur_totale // 2 + 30, self.largeur, 40),
-                         Qt.AlignCenter, "Appuyez sur R pour rejouer")
+                         Qt.AlignCenter, "Appuyez sur R pour rejouer ou ECHAP pour le menu")

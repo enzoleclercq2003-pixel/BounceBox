@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1049</width>
+    <height>767</height>
+   </rect>
+  </property>
+  <property name="cursor">
+   <cursorShape>PointingHandCursor</cursorShape>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>favicon.ico</normaloff>favicon.ico</iconset>
+  </property>
+  <property name="autoFillBackground">
+   <bool>true</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+
+/* 2. LE GROS TITRE */
+QLabel#titre {
+    font-size: 200px;
+    font-weight: 900;
+    font-family: &quot;Impact&quot;; /* Ou &quot;Arial Black&quot; */
+    color: #FFFFFF;
+    background: transparent;
+    /* Petit contour noir autour des lettres pour bien les lire */
+    qproperty-alignment: AlignCenter;
+}
+
+/* 3. LE TABLEAU DES SCORES (Effet &quot;Verre&quot; semi-transparent) */
+QLabel#label_profils {
+    background-color: rgba(20, 20, 35, 210); /* Fond bleu très sombre transparent à 80% */
+    border-radius: 15px; /* Bords arrondis */
+    padding: 20px;
+    color: #FFD700; /* Texte doré classe */
+    font-size: 40px;
+    font-weight: bold;
+    border: 2px solid rgba(255, 255, 255, 50); /* Fin contour blanc transparent */
+}
+
+/* 4. LES CHAMPS POUR LES PSEUDOS */
+QLineEdit {
+    background-color: rgba(0, 0, 0, 180); /* Fond noir semi-transparent */
+    color: white;
+    font-size: 70px;
+    padding: 24px;
+    border-radius: 8px;
+    border: 2px solid #555;
+}
+/* Quand on clique sur le champ pour écrire, le bord s'allume ! */
+QLineEdit:focus {
+    border: 2px solid #dc3c3c;
+    background-color: rgba(0, 0, 0, 220);
+}
+
+/* 5. LE BOUTON LANCER (Avec dégradé de couleur) */
+QPushButton#btn_jouer {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #dc3c3c, stop:1 #ff6b6b);
+    color: white;
+    font-size: 90px;
+    font-weight: bold;
+    padding: 15px;
+    border-radius: 12px;
+    border: 2px solid #aa1111;
+}
+/* Quand la souris passe sur le bouton, il s'éclaire ! */
+QPushButton#btn_jouer:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff5555, stop:1 #ff8888);
+    border: 2px solid #ffcccc;
+}
+QPushButton#btn_jouer:pressed {
+    background-color: #aa1111; /* S'assombrit quand on clique */
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="titre">
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="mouseTracking">
+      <bool>true</bool>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>BounceBox</string>
+     </property>
+    </widget>
+   </item>
+   <item alignment="Qt::AlignHCenter">
+    <widget class="QLabel" name="label_profils">
+     <property name="text">
+      <string>Chargement des scores</string>
+     </property>
+    </widget>
+   </item>
+   <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+    <widget class="QLineEdit" name="input_j1">
+     <property name="text">
+      <string>       Joueur 1</string>
+     </property>
+     <property name="placeholderText">
+      <string>Pseudo Joueur Rouge</string>
+     </property>
+    </widget>
+   </item>
+   <item alignment="Qt::AlignHCenter|Qt::AlignTop">
+    <widget class="QLineEdit" name="input_j2">
+     <property name="text">
+      <string>       Joueur 2</string>
+     </property>
+     <property name="placeholderText">
+      <string>Pseudo Joueur Bleu</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="btn_jouer">
+     <property name="text">
+      <string>Jouer</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
